@@ -1013,6 +1013,127 @@ class STAdv(object):
                                        targets[i:i + self.batch_size]))
         return np.array(r)
 
+    def attack_batch(self, imgs, labs):
+        """
+        Run the attack on a batch of instance and labels.
+        """
+        def compare(x, y):
+            if not isinstance(x, (float, int, np.int64)):
+                x = np.copy(x)
+                if self.TARGETED:
+                    x[y] -= self.CONFIDENCE
+                else:
+                    x[y] += self.CONFIDENCE
+                x = np.argmax(x)
+            if self.TARGETED:
+                return x == y
+            else:
+                return x != y
+
+        batch_size = self.batch_size
+
+        oimgs = np.clip(imgs, self.clip_min, self.clip_max)
+
+        # re-scale instances to be within range [0, 1]
+        imgs = (imgs - self.clip_min) / (self.clip_max - self.clip_min)
+        imgs = np.clip(imgs, 0, 1)
+        # now convert to [-1, 1]
+        imgs = (imgs * 2) - 1
+        # convert to tanh-space
+        imgs = np.arctanh(imgs * .999999)
+
+        # set the lower and upper bounds accordingly
+        lower_bound = np.zeros(batch_size)
+        CONST = np.ones(batch_size) * self.initial_const
+        upper_bound = np.ones(batch_size) * 1e10
+
+        # placeholders for the best l2, score, and instance attack found so far
+        o_bestl2 = [1e10] * batch_size
+        o_bestscore = [-1] * batch_size
+        o_bestattack = np.copy(oimgs)
+
+        for outer_step in range(self.BINARY_SEARCH_STEPS):
+            # completely reset adam's internal state.
+            self.sess.run(self.init)
+            batch = imgs[:batch_size]
+            batchlab = labs[:batch_size]
+
+            bestl2 = [1e10] * batch_size
+            bestscore = [-1] * batch_size
+            _logger.debug("  Binary search step {} of {}".
+                          format(outer_step, self.BINARY_SEARCH_STEPS))
+
+            # The last iteration (if we run many steps) repeat the search once.
+            if self.repeat and outer_step == self.BINARY_SEARCH_STEPS - 1:
+                CONST = upper_bound
+
+            # set the variables so that we don't have to send them over again
+            self.sess.run(self.setup, {self.assign_timg: batch,
+                                       self.assign_tlab: batchlab,
+                                       self.assign_const: CONST})
+
+            prev = 1e6
+            for iteration in range(self.MAX_ITERATIONS):
+                # perform the attack
+                _, l, l2s, scores, nimg = self.sess.run([self.train,
+                                                         self.loss,
+                                                         self.l2dist,
+                                                         self.output,
+                                                         self.newimg])
+
+                if iteration % ((self.MAX_ITERATIONS // 10) or 1) == 0:
+                    _logger.debug(("    Iteration {} of {}: loss={:.3g} " +
+                                   "l2={:.3g} f={:.3g}")
+                                  .format(iteration, self.MAX_ITERATIONS,
+                                          l, np.mean(l2s), np.mean(scores)))
+
+                # check if we should abort search if we're getting nowhere.
+                if self.ABORT_EARLY and \
+                   iteration % ((self.MAX_ITERATIONS // 10) or 1) == 0:
+                    if l > prev * .9999:
+                        msg = "    Failed to make progress; stop early"
+                        _logger.debug(msg)
+                        break
+                    prev = l
+
+                # adjust the best result found so far
+                for e, (l2, sc, ii) in enumerate(zip(l2s, scores, nimg)):
+                    lab = np.argmax(batchlab[e])
+                    if l2 < bestl2[e] and compare(sc, lab):
+                        bestl2[e] = l2
+                        bestscore[e] = np.argmax(sc)
+                    if l2 < o_bestl2[e] and compare(sc, lab):
+                        o_bestl2[e] = l2
+                        o_bestscore[e] = np.argmax(sc)
+                        o_bestattack[e] = ii
+
+            # adjust the constant as needed
+            for e in range(batch_size):
+                if compare(bestscore[e], np.argmax(batchlab[e])) and \
+                   bestscore[e] != -1:
+                    # success, divide const by two
+                    upper_bound[e] = min(upper_bound[e], CONST[e])
+                    if upper_bound[e] < 1e9:
+                        CONST[e] = (lower_bound[e] + upper_bound[e]) / 2
+                else:
+                    # failure, either multiply by 10 if no solution found yet
+                    #          or do binary search with the known upper bound
+                    lower_bound[e] = max(lower_bound[e], CONST[e])
+                    if upper_bound[e] < 1e9:
+                        CONST[e] = (lower_bound[e] + upper_bound[e]) / 2
+                    else:
+                        CONST[e] *= 10
+            _logger.debug("  Successfully generated adversarial examples " +
+                          "on {} of {} instances.".
+                          format(sum(upper_bound < 1e9), batch_size))
+            o_bestl2 = np.array(o_bestl2)
+            mean = np.mean(np.sqrt(o_bestl2[o_bestl2 < 1e9]))
+            _logger.debug("   Mean successful distortion: {:.4g}".format(mean))
+
+        # return the best solution found
+        o_bestl2 = np.array(o_bestl2)
+        return o_bestattack
+
 
 class ElasticNetMethod(object):
 
