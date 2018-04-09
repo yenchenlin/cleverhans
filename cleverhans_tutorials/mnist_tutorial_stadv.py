@@ -16,7 +16,7 @@ from tensorflow.python.platform import flags
 
 import logging
 import os
-from cleverhans.attacks import CarliniWagnerL2
+from cleverhans.attacks import STAdv
 from cleverhans.utils import pair_visual, grid_visual, AccuracyReport
 from cleverhans.utils import set_log_level
 from cleverhans.utils_mnist import data_mnist
@@ -218,7 +218,7 @@ def mnist_tutorial_STAdv(train_start=0, train_end=60000, test_start=0,
 
 
 def main(argv=None):
-    mnist_tutorial_cw(viz_enabled=FLAGS.viz_enabled,
+    mnist_tutorial_STAdv(viz_enabled=FLAGS.viz_enabled,
                       nb_epochs=FLAGS.nb_epochs,
                       batch_size=FLAGS.batch_size,
                       nb_classes=FLAGS.nb_classes,
@@ -230,7 +230,7 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    flags.DEFINE_boolean('viz_enabled', True, 'Visualize adversarial ex.')
+    flags.DEFINE_boolean('viz_enabled', False, 'Visualize adversarial ex.')
     flags.DEFINE_integer('nb_epochs', 6, 'Number of epochs to train model')
     flags.DEFINE_integer('batch_size', 128, 'Size of training batches')
     flags.DEFINE_integer('nb_classes', 10, 'Number of output classes')
@@ -238,7 +238,7 @@ if __name__ == '__main__':
     flags.DEFINE_float('learning_rate', 0.001, 'Learning rate for training')
     flags.DEFINE_string('model_path', os.path.join("models", "mnist"),
                         'Path to save or load the model file')
-    flags.DEFINE_boolean('attack_iterations', 100,
+    flags.DEFINE_integer('attack_iterations', 100,
                          'Number of iterations to run attack; 1000 is good')
     flags.DEFINE_boolean('targeted', True,
                          'Run the tutorial in targeted mode?')
