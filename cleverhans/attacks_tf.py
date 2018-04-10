@@ -997,7 +997,7 @@ class STAdv(object):
         # sum up the losses
         self.loss2 = tf.reduce_sum(self.flow_dist)
         self.loss1 = tf.reduce_sum(self.const * loss1)
-        self.loss = self.loss1 + self.loss2
+        self.loss = self.loss1 + 0.05 * self.loss2
 
         # Setup the adam optimizer and keep track of variables we're creating
         start_vars = set(x.name for x in tf.global_variables())
