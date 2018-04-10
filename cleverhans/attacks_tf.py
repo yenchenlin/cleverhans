@@ -965,7 +965,7 @@ class STAdv(object):
         height = self.shape[-2]
         width = self.shape[-1]
         neighbors = [(+1, +1), (+1, -1), (-1, +1), (-1, -1)]
-        self.flow_dist = 0.0
+        self.flow_dist = tf.zeros(self.batch_size)
 
         # Todo: wrong distance, and maybe slow
         for i in xrange(height):
@@ -977,7 +977,8 @@ class STAdv(object):
                         continue
                     else:
                         self.flow_dist += tf.norm(
-                            modifier[:, :, i, j] - modifier[:, :, n_i, n_j]
+                            modifier[:, :, i, j] - modifier[:, :, n_i, n_j],
+                            axis=1
                         )
 
         # compute the probability of the label class versus the maximum other
@@ -1093,7 +1094,7 @@ class STAdv(object):
                 # perform the attack
                 _, l, l2s, scores, nimg = self.sess.run([self.train,
                                                          self.loss,
-                                                         self.l2dist,
+                                                         self.flow_dist,
                                                          self.output,
                                                          self.newimg])
 
