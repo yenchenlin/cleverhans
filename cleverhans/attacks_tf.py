@@ -930,11 +930,11 @@ class STAdv(object):
 
         self.repeat = binary_search_steps >= 10
 
+        self.flow_shape = tuple([batch_size, 2] + list(shape))
         self.shape = shape = tuple([batch_size] + list(shape))
-        flow_shape = tuple([batch_size, 2] + list(shape))
 
         # the variable we're going to optimize over
-        modifier = tf.Variable(np.zeros(flow_shape, dtype=np.float32))
+        modifier = tf.Variable(np.zeros(self.flow_shape, dtype=np.float32))
 
         # these are variables to be more efficient in sending data to tf
         self.timg = tf.Variable(np.zeros(shape), dtype=tf.float32,
