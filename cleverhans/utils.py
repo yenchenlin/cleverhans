@@ -216,8 +216,8 @@ def grid_visual(data):
                 plt.imshow(data[x, y, :, :, :])
 
     # Draw the plot and return
-    # plt.show()
-    figure.savefig('viz.png')
+    plt.savefig('viz')
+    plt.show()
     return figure
 
 

@@ -211,9 +211,10 @@ def mnist_tutorial_STAdv(train_start=0, train_end=60000, test_start=0,
 
     # Finally, block & display a grid of all the adversarial examples
     if viz_enabled:
+        import matplotlib
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-        plt.imsave(grid_viz_data)
-        # _ = grid_visual(grid_viz_data)
+        _ = grid_visual(grid_viz_data)
 
     return report
 
