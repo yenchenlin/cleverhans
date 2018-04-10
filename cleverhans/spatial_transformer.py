@@ -16,7 +16,6 @@
 from six.moves import xrange
 import tensorflow as tf
 
-from IPython import embed
 
 def transformer(U, flow, name='SpatialTransformer', **kwargs):
     """Spatial Transformer Layer
@@ -197,7 +196,6 @@ def transformer(U, flow, name='SpatialTransformer', **kwargs):
 from six.moves import xrange
 import tensorflow as tf
 
-from IPython import embed
 
 def transformer(U, flow, name='SpatialTransformer', **kwargs):
     """Spatial Transformer Layer

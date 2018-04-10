@@ -11,7 +11,7 @@ import warnings
 
 from . import utils_tf
 from . import utils
-from spatial_transformer import transformer
+from .spatial_transformer import transformer
 
 _logger = utils.create_logger("cleverhans.attacks.tf")
 
@@ -965,11 +965,11 @@ class STAdv(object):
         height = self.shape[-2]
         width = self.shape[-1]
         neighbors = [(+1, +1), (+1, -1), (-1, +1), (-1, -1)]
-        self.flow_dist = 0
+        self.flow_dist = 0.0
 
         # Todo: wrong distance, and maybe slow
-        for i in height:
-            for j in width:
+        for i in xrange(height):
+            for j in xrange(width):
                 for n in neighbors:
                     n_i = i + n[0]
                     n_j = j + n[1]
