@@ -212,7 +212,8 @@ def mnist_tutorial_STAdv(train_start=0, train_end=60000, test_start=0,
     # Finally, block & display a grid of all the adversarial examples
     if viz_enabled:
         import matplotlib.pyplot as plt
-        _ = grid_visual(grid_viz_data)
+        plt.imsave(grid_viz_data)
+        # _ = grid_visual(grid_viz_data)
 
     return report
 
@@ -230,7 +231,7 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    flags.DEFINE_boolean('viz_enabled', False, 'Visualize adversarial ex.')
+    flags.DEFINE_boolean('viz_enabled', True, 'Visualize adversarial ex.')
     flags.DEFINE_integer('nb_epochs', 6, 'Number of epochs to train model')
     flags.DEFINE_integer('batch_size', 128, 'Size of training batches')
     flags.DEFINE_integer('nb_classes', 10, 'Number of output classes')
