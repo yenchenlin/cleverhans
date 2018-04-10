@@ -11,6 +11,7 @@ import warnings
 
 from . import utils_tf
 from . import utils
+from spatial_transformer import transformer
 
 _logger = utils.create_logger("cleverhans.attacks.tf")
 
@@ -930,9 +931,10 @@ class STAdv(object):
         self.repeat = binary_search_steps >= 10
 
         self.shape = shape = tuple([batch_size] + list(shape))
+        flow_shape = tuple([batch_size, 2] + list(shape))
 
         # the variable we're going to optimize over
-        modifier = tf.Variable(np.zeros(shape, dtype=np.float32))
+        modifier = tf.Variable(np.zeros(flow_shape, dtype=np.float32))
 
         # these are variables to be more efficient in sending data to tf
         self.timg = tf.Variable(np.zeros(shape), dtype=tf.float32,
@@ -952,17 +954,31 @@ class STAdv(object):
 
         # the resulting instance, tanh'd to keep bounded from clip_min
         # to clip_max
-        self.newimg = (tf.tanh(modifier + self.timg) + 1) / 2
+        # self.newimg = (tf.tanh(modifier + self.timg) + 1) / 2
+        self.newimg = transformer(self.timg, modifier)
         self.newimg = self.newimg * (clip_max - clip_min) + clip_min
 
         # prediction BEFORE-SOFTMAX of the model
         self.output = model.get_logits(self.newimg)
 
-        # distance to the input data
-        self.other = (tf.tanh(self.timg) + 1) / \
-            2 * (clip_max - clip_min) + clip_min
-        self.l2dist = tf.reduce_sum(tf.square(self.newimg - self.other),
-                                    list(range(1, len(shape))))
+        # calculate distance of flow
+        height = self.shape[-2]
+        width = self.shape[-1]
+        neighbors = [(+1, +1), (+1, -1), (-1, +1), (-1, -1)]
+        self.flow_dist = 0
+
+        # Todo: wrong distance, and maybe slow
+        for i in height:
+            for j in width:
+                for n in neighbors:
+                    n_i = i + n[0]
+                    n_j = j + n[1]
+                    if n_i < 0 or n_i > height-1 or n_j < 0 or n_j > width-1:
+                        continue
+                    else:
+                        self.flow_dist += tf.norm(
+                            modifier[:, :, i, j] - modifier[:, :, n_i, n_j]
+                        )
 
         # compute the probability of the label class versus the maximum other
         real = tf.reduce_sum((self.tlab) * self.output, 1)
@@ -978,7 +994,7 @@ class STAdv(object):
             loss1 = tf.maximum(0.0, real - other + self.CONFIDENCE)
 
         # sum up the losses
-        self.loss2 = tf.reduce_sum(self.l2dist)
+        self.loss2 = tf.reduce_sum(self.flow_dist)
         self.loss1 = tf.reduce_sum(self.const * loss1)
         self.loss = self.loss1 + self.loss2
 
