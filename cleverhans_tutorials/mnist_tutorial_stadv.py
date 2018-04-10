@@ -27,11 +27,11 @@ FLAGS = flags.FLAGS
 
 
 def mnist_tutorial_STAdv(train_start=0, train_end=60000, test_start=0,
-                      test_end=10000, viz_enabled=True, nb_epochs=6,
-                      batch_size=128, nb_classes=10, source_samples=10,
-                      learning_rate=0.001, attack_iterations=100,
-                      model_path=os.path.join("models", "mnist"),
-                      targeted=True):
+                         test_end=10000, viz_enabled=True, nb_epochs=6,
+                         batch_size=128, nb_classes=10, source_samples=10,
+                         learning_rate=0.001, attack_iterations=100,
+                         model_path=os.path.join("models", "mnist"),
+                         targeted=True):
     """
     MNIST tutorial for Carlini and Wagner's attack
     :param train_start: index of first training set example
