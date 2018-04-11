@@ -962,31 +962,34 @@ class STAdv(object):
         self.output = model.get_logits(self.newimg)
 
         # calculate distance of flow
-        height = self.shape[-2]
-        width = self.shape[-1]
+        height = self.shape[-3]
+        width = self.shape[-2]
+
         neighbors = [(+1, +1), (+1, -1), (-1, +1), (-1, -1)]
         flow_dist = tf.zeros(self.batch_size)
 
-        # Todo: maybe slow
-        for i in xrange(height):
-            for j in xrange(width):
+        # Todo: too slow
+        for i in range(2):
+            for j in range(2):
                 for n in neighbors:
                     n_i = i + n[0]
                     n_j = j + n[1]
                     if n_i < 0 or n_i > height-1 or n_j < 0 or n_j > width-1:
                         continue
                     else:
-                        flow_dist += tf.norm(
-                            modifier[:, :, i, j] - modifier[:, :, n_i, n_j],
-                            axis=1
-                        )
+                        # flow_dist += tf.norm(
+                        #     modifier[:, :, i, j, 0] - modifier[:, :, n_i, n_j, 0],
+                        #     axis=1
+                        # )
+                        flow_dist += tf.sqrt(tf.reduce_sum(tf.square(
+                            modifier[:, :, i, j, 0] - modifier[:, :, n_i, n_j, 0]), [1]
+                        ) + 1e-10)
         self.flow_dist = flow_dist
 
         # compute the probability of the label class versus the maximum other
         real = tf.reduce_sum((self.tlab) * self.output, 1)
         other = tf.reduce_max(
-            (1 - self.tlab) * self.output - self.tlab * 10000,
-            1)
+            (1 - self.tlab) * self.output - self.tlab * 10000, 1)
 
         if self.TARGETED:
             # if targeted, optimize for making the other class most likely
